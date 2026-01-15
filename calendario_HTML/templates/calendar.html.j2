@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Calendario {{ year }}</title>
+  <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="nav">
+      <button id="prevMonth" class="btn">◀</button>
+
+      <div class="title">
+        <h1 id="monthTitle"></h1>
+        <div class="sub">
+          <span id="yearLabel">Año {{ year }}</span>
+          <label>Mes
+            <select id="monthSelect">
+              {% for m in range(1,13) %}
+                <option value="{{ m }}">{{ m }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <button id="nextMonth" class="btn">▶</button>
+    </div>
+
+    <div class="controls">
+      <label>Filtrar categoría:
+        <select id="categoryFilter">
+          <option value="__all__">Todas</option>
+          {% for c in categories %}
+            <option value="{{ c|e }}">{{ c|e }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button id="printBtn" class="btn secondary">Imprimir</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="calendar">
+      <div class="weekday">
+        <div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div>
+      </div>
+
+      <!-- 12 grids: solo se muestra el activo -->
+      <div id="yearContainer">
+        {% for mctx in months %}
+          <div class="grid month-grid"
+               data-month="{{ mctx.month }}"
+               style="display:none"
+               aria-hidden="true">
+            {% for week in mctx.weeks %}
+              {% for day in week %}
+                <div class="cell {% if not day.in_month %}muted{% endif %}" data-date="{{ day.date }}">
+                  <div class="cell-top">
+                    <span class="daynum">{{ day.day }}</span>
+                  </div>
+                  <div class="events">
+                    {% for ev in day.events %}
+                      <button class="event"
+                              data-event='{{ ev | tojson }}'
+                              data-category="{{ ev.category|e }}"
+                              title="{{ ev.title|e }} ({{ ev.category|e }})">
+                        <span class="dot" data-category="{{ ev.category|e }}"></span>
+                        <span class="ev-title">{{ ev.title|e }}</span>
+                      </button>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endfor %}
+            {% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h2>Detalles</h2>
+        <button id="closeSidebar" class="btn small">✕</button>
+      </div>
+
+      <div class="sidebar-content" id="sidebarContent">
+        <p class="hint">Haz clic en un evento para ver más información.</p>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Tooltip -->
+<div id="tooltip" class="tooltip" role="tooltip" aria-hidden="true">
+  <div class="tooltip-card">
+    <div class="tooltip-top">
+      <p class="tooltip-title" id="ttTitle"></p>
+      <span class="tooltip-badge" id="ttBadge"></span>
+    </div>
+    <div class="tooltip-body">
+      <p class="tooltip-when" id="ttWhen"></p>
+      <p class="tooltip-desc" id="ttDesc"></p>
+    </div>
+  </div>
+</div>
+
+
+  <script>
+    const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+    const monthSelect = document.getElementById("monthSelect");
+    const monthTitle = document.getElementById("monthTitle");
+    const grids = Array.from(document.querySelectorAll(".month-grid"));
+// Tooltip
+const tooltip = document.getElementById("tooltip");
+const ttTitle = document.getElementById("ttTitle");
+const ttBadge = document.getElementById("ttBadge");
+const ttWhen  = document.getElementById("ttWhen");
+const ttDesc  = document.getElementById("ttDesc");
+
+let tooltipVisible = false;
+
+function showTooltip(evData, x, y){
+  ttTitle.textContent = evData.title;
+  ttBadge.textContent = evData.category;
+  ttBadge.setAttribute("data-category", evData.category);
+  ttWhen.innerHTML = `<strong>Cuándo:</strong> ${fmtRange(evData)}`;
+  ttDesc.textContent = evData.description || "";
+
+  tooltip.classList.add("show");
+  tooltip.setAttribute("aria-hidden", "false");
+  tooltipVisible = true;
+
+  positionTooltip(x, y);
+}
+
+function hideTooltip(){
+  tooltip.classList.remove("show");
+  tooltip.setAttribute("aria-hidden", "true");
+  tooltipVisible = false;
+}
+
+function positionTooltip(x, y){
+  // offset respecto al ratón
+  const pad = 14;
+  const offsetX = 14;
+  const offsetY = 16;
+
+  tooltip.style.left = "0px";
+  tooltip.style.top = "0px";
+  tooltip.style.right = "auto";
+
+  const rect = tooltip.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  let left = x + offsetX;
+  let top  = y + offsetY;
+
+  // Si se sale por la derecha, lo ponemos a la izquierda del cursor
+  if(left + rect.width + pad > vw){
+    left = Math.max(pad, x - rect.width - offsetX);
+  }
+  // Si se sale por abajo, lo subimos
+  if(top + rect.height + pad > vh){
+    top = Math.max(pad, y - rect.height - offsetY);
+  }
+
+  tooltip.style.left = `${left}px`;
+  tooltip.style.top  = `${top}px`;
+}
+
+
+
+    // Sidebar
+    const sidebar = document.getElementById("sidebar");
+    const sidebarContent = document.getElementById("sidebarContent");
+    document.getElementById("closeSidebar").addEventListener("click", () => {
+      sidebar.classList.remove("open");
+    });
+
+    function fmtRange(ev){
+      const s = new Date(ev.start);
+      const e = ev.end ? new Date(ev.end) : null;
+      const optsDate = { year:"numeric", month:"2-digit", day:"2-digit" };
+      const optsTime = { hour:"2-digit", minute:"2-digit" };
+
+      const sDate = s.toLocaleDateString("es-ES", optsDate);
+      const sTime = s.toLocaleTimeString("es-ES", optsTime);
+
+      if(!e) return `${sDate} ${sTime}`;
+
+      const eDate = e.toLocaleDateString("es-ES", optsDate);
+      const eTime = e.toLocaleTimeString("es-ES", optsTime);
+
+      if(sDate === eDate) return `${sDate} ${sTime} - ${eTime}`;
+      return `${sDate} ${sTime} → ${eDate} ${eTime}`;
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function openEvent(ev){
+      sidebarContent.innerHTML = `
+        <div class="detail">
+          <div class="badge" data-category="${escapeHtml(ev.category)}">${escapeHtml(ev.category)}</div>
+          <h3>${escapeHtml(ev.title)}</h3>
+          <p class="when"><strong>Cuándo:</strong> ${fmtRange(ev)}</p>
+          <p class="desc">${escapeHtml(ev.description)}</p>
+        </div>
+      `;
+      sidebar.classList.add("open");
+    }
+
+    // Mostrar un mes y ocultar el resto
+    function showMonth(m){
+      grids.forEach(g => {
+        const gm = parseInt(g.dataset.month, 10);
+        const active = (gm === m);
+        g.style.display = active ? "grid" : "none";
+        g.setAttribute("aria-hidden", active ? "false" : "true");
+      });
+
+      monthSelect.value = String(m);
+      monthTitle.textContent = `${monthNames[m-1]} {{ year }}`;
+      applyFilter(); // reaplica filtro al cambiar de mes
+      bindMonthEvents(); // re-engancha click (por seguridad)
+    }
+
+    // Click en eventos del mes visible
+    function bindMonthEvents(){
+      function bindMonthEvents(){
+  const activeGrid = grids.find(g => g.style.display !== "none");
+  if(!activeGrid) return;
+
+  activeGrid.querySelectorAll(".event").forEach(btn => {
+    const evData = JSON.parse(btn.dataset.event);
+
+    // Click: abre sidebar
+    btn.onclick = () => openEvent(evData);
+
+    // Hover: tooltip
+    btn.onmouseenter = (e) => {
+      showTooltip(evData, e.clientX, e.clientY);
+    };
+
+    btn.onmousemove = (e) => {
+      if(tooltipVisible) positionTooltip(e.clientX, e.clientY);
+    };
+
+    btn.onmouseleave = () => {
+      hideTooltip();
+    };
+
+    // Accesibilidad: si navegas con teclado
+    btn.onfocus = (e) => showTooltip(evData, e.clientX || 30, e.clientY || 30);
+    btn.onblur = () => hideTooltip();
+  });
+}
+
+    }
+
+    // Filtro por categoría
+    const categoryFilter = document.getElementById("categoryFilter");
+    function applyFilter(){
+      const v = categoryFilter.value;
+      const activeGrid = grids.find(g => g.style.display !== "none");
+      if(!activeGrid) return;
+
+      activeGrid.querySelectorAll(".event").forEach(btn => {
+        const c = btn.dataset.category;
+        const show = (v === "__all__" || c === v);
+        btn.style.display = show ? "flex" : "none";
+      });
+    }
+    categoryFilter.addEventListener("change", applyFilter);
+
+    // Navegación real entre meses
+    function shiftMonth(delta){
+      let m = parseInt(monthSelect.value, 10);
+      m += delta;
+      if(m === 0) m = 12;
+      if(m === 13) m = 1;
+      showMonth(m);
+    }
+    document.getElementById("prevMonth").addEventListener("click", () => shiftMonth(-1));
+    document.getElementById("nextMonth").addEventListener("click", () => shiftMonth(1));
+    monthSelect.addEventListener("change", () => showMonth(parseInt(monthSelect.value, 10)));
+
+    // Imprimir
+    document.getElementById("printBtn").addEventListener("click", () => window.print());
+window.addEventListener("scroll", () => { if(tooltipVisible) hideTooltip(); }, { passive: true });
+window.addEventListener("resize", () => { if(tooltipVisible) hideTooltip(); }, { passive: true });
+document.addEventListener("keydown", (e) => { if(e.key === "Escape") hideTooltip(); });
+    // Inicial: mes actual del sistema si coincide con el año, si no enero
+    (function init(){
+      const now = new Date();
+      let startMonth = 1;
+      const y = {{ year }};
+      if(now.getFullYear() === y) startMonth = now.getMonth() + 1;
+      showMonth(startMonth);
+    })();
+  </script>
+</body>
+</html>
