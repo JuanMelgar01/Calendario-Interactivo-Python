@@ -6,8 +6,6 @@
   --border: rgba(255,255,255,.10);
   --btn: rgba(255,255,255,.10);
   --btn2: rgba(255,255,255,.16);
-
-  /* colores por categoría (se asignan por atributo) */
   --cat-default: #8bd3ff;
   --cat-trabajo: #ffb86b;
   --cat-estudio: #a7ff83;
@@ -48,7 +46,7 @@ body{
   padding: 6px 8px;
 }
 
-.controls{ display:flex; align-items:center; gap: 10px; color: var(--muted); }
+.controls{ display:flex; align-items:center; gap: 10px; color: var(--muted); flex-wrap: wrap; }
 .controls select{
   margin-left: 6px;
   background: rgba(255,255,255,.06);
@@ -56,6 +54,12 @@ body{
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 6px 8px;
+}
+
+.view-toggle{
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
 }
 
 .btn{
@@ -69,6 +73,7 @@ body{
 .btn:hover{ background: var(--btn2); }
 .btn.secondary{ padding: 10px 14px; }
 .btn.small{ padding: 6px 10px; border-radius: 10px; }
+.btn.active{ background: var(--btn2); }
 
 .layout{
   display:grid;
@@ -157,10 +162,46 @@ body{
   flex: 0 0 auto;
 }
 
-/* Mapeo de colores por categoría vía atributo (puedes ampliar) */
 .dot[data-category="Trabajo"], .badge[data-category="Trabajo"]{ background: var(--cat-trabajo); }
 .dot[data-category="Estudio"], .badge[data-category="Estudio"]{ background: var(--cat-estudio); }
 .dot[data-category="Salud"],   .badge[data-category="Salud"]{ background: var(--cat-salud); }
+
+.week-toolbar{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.week-title{
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  text-align:center;
+  flex: 1 1 auto;
+}
+
+.week-grid{
+  display:grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.week-cell{
+  min-height: 140px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 10px;
+}
+.week-cell:nth-child(7n){ border-right: none; }
+
+.week-cell-top{
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+  margin-bottom: 6px;
+}
 
 .sidebar{
   background: rgba(18,26,51,.70);
@@ -214,9 +255,7 @@ body{
 }
 .notice.show{ opacity: 1; }
 
-
-/* Tooltip bonito */
-.tooltip {
+.tooltip{
   position: fixed;
   z-index: 9999;
   max-width: 320px;
@@ -226,12 +265,12 @@ body{
   transition: opacity .12s ease, transform .12s ease;
 }
 
-.tooltip.show {
+.tooltip.show{
   opacity: 1;
   transform: translateY(0) scale(1);
 }
 
-.tooltip-card {
+.tooltip-card{
   background: rgba(18, 26, 51, .96);
   border: 1px solid rgba(255,255,255,.14);
   border-radius: 14px;
@@ -239,7 +278,7 @@ body{
   overflow: hidden;
 }
 
-.tooltip-top {
+.tooltip-top{
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -248,14 +287,14 @@ body{
   border-bottom: 1px solid rgba(255,255,255,.10);
 }
 
-.tooltip-title {
+.tooltip-title{
   font-size: 13px;
   font-weight: 750;
   margin: 0;
   line-height: 1.2;
 }
 
-.tooltip-badge {
+.tooltip-badge{
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -268,45 +307,44 @@ body{
   white-space: nowrap;
 }
 
-.tooltip-body {
+.tooltip-body{
   padding: 10px 12px 12px;
 }
 
-.tooltip-when {
+.tooltip-when{
   margin: 0 0 8px;
   color: var(--muted);
   font-size: 12px;
 }
 
-.tooltip-desc {
+.tooltip-desc{
   margin: 0;
   color: rgba(233,236,245,.92);
   font-size: 12px;
   line-height: 1.35;
-
-  display: -webkit-box;
-  -webkit-line-clamp: 2;   /* 2 líneas máximo */
-  -webkit-box-orient: vertical;
   overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
-/* Colores por categoría (reutiliza tus vars) */
-.tooltip-badge[data-category="Trabajo"] { background: var(--cat-trabajo); }
-.tooltip-badge[data-category="Estudio"] { background: var(--cat-estudio); }
-.tooltip-badge[data-category="Salud"]   { background: var(--cat-salud); }
 
+.tooltip-badge[data-category="Trabajo"]{ background: var(--cat-trabajo); }
+.tooltip-badge[data-category="Estudio"]{ background: var(--cat-estudio); }
+.tooltip-badge[data-category="Salud"]{ background: var(--cat-salud); }
 
 @media (max-width: 980px){
   .layout{ grid-template-columns: 1fr; }
   .sidebar{ position: relative; top: 0; height: auto; }
 }
 
-/* Impresión: solo calendario, sin sidebar/controles */
 @media print{
   body{ background: #fff; color: #000; }
-  .topbar, .sidebar, .notice{ display:none !important; }
+  .topbar, .sidebar, .notice, .view-toggle{ display:none !important; }
   .calendar{ border: none; }
   .cell{ min-height: 90px; }
+  .week-cell{ min-height: 110px; }
   .event{ border: 1px solid #bbb; background: #fff; color: #000; }
   .daynum{ color: #000; border-color: #bbb; }
 }

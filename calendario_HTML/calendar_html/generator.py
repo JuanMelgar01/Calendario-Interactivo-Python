@@ -7,6 +7,7 @@ from typing import Dict, Any
 class GenerationError(Exception):
     pass
 
+    
 
 def render_calendar_html(context: Dict[str, Any], templates_dir: str, template_name: str) -> str:
     try:

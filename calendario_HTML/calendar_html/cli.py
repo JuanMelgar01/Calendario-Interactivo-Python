@@ -61,6 +61,8 @@ def main():
     else:
         context = build_year_view(events, args.year)
 
+    context["all_events"] = [e.to_dict() for e in events]
+
     html = render_calendar_html(context, args.templates, args.template)
     write_output(html, args.output)
 
