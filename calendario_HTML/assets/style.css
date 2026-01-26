@@ -1,32 +1,76 @@
+/* =========================
+   Calendario – Tema (dark/light) por CSS variables
+   Cambia con: <html data-theme="light"> o "dark"
+   ========================= */
+
+/* --- Tema oscuro (por defecto) --- */
 :root{
+  /* base */
   --bg: #0b1020;
+  --bg2: #070a14;
   --panel: #121a33;
   --text: #e9ecf5;
   --muted: #91a0c7;
+
   --border: rgba(255,255,255,.10);
   --btn: rgba(255,255,255,.10);
   --btn2: rgba(255,255,255,.16);
 
-  /* colores por categoría (se asignan por atributo) */
+  /* superficies */
+  --topbar-bg: rgba(10,14,28,.85);
+  --surface: rgba(18,26,51,.70);
+  --input-bg: rgba(255,255,255,.06);
+
+  --event-bg: rgba(255,255,255,.06);
+  --event-bg-hover: rgba(255,255,255,.10);
+
+  /* categoría */
   --cat-default: #8bd3ff;
   --cat-trabajo: #ffb86b;
   --cat-estudio: #a7ff83;
   --cat-salud: #ff7aa2;
 }
 
+/* --- Tema claro --- */
+:root[data-theme="light"]{
+  --bg: #f6f7fb;
+  --bg2: #ffffff;
+  --panel: #ffffff;
+  --text: #111827;
+  --muted: #6b7280;
+
+  --border: rgba(17,24,39,.12);
+  --btn: rgba(17,24,39,.06);
+  --btn2: rgba(17,24,39,.10);
+
+  --topbar-bg: rgba(255,255,255,.85);
+  --surface: rgba(255,255,255,.90);
+  --input-bg: rgba(17,24,39,.06);
+
+  --event-bg: rgba(17,24,39,.04);
+  --event-bg-hover: rgba(17,24,39,.07);
+
+  --cat-default: #2563eb;
+  --cat-trabajo: #ea580c;
+  --cat-estudio: #16a34a;
+  --cat-salud: #db2777;
+}
+
 *{ box-sizing: border-box; }
+
 body{
-  margin:0;
+  margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  background: linear-gradient(180deg, var(--bg), #070a14);
+  background: linear-gradient(180deg, var(--bg), var(--bg2));
   color: var(--text);
 }
 
+/* ===== Topbar ===== */
 .topbar{
   position: sticky;
   top: 0;
   z-index: 10;
-  background: rgba(10,14,28,.85);
+  background: var(--topbar-bg);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
   padding: 14px 16px;
@@ -40,8 +84,10 @@ body{
 .nav{ display:flex; align-items:center; gap: 12px; }
 .title h1{ margin:0; font-size: 20px; text-transform: capitalize; }
 .sub{ display:flex; gap: 10px; align-items:center; color: var(--muted); font-size: 12px; }
-.sub input, .sub select{
-  background: rgba(255,255,255,.06);
+
+.sub input, .sub select,
+.controls select{
+  background: var(--input-bg);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -49,15 +95,9 @@ body{
 }
 
 .controls{ display:flex; align-items:center; gap: 10px; color: var(--muted); }
-.controls select{
-  margin-left: 6px;
-  background: rgba(255,255,255,.06);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 6px 8px;
-}
+.controls select{ margin-left: 6px; }
 
+/* ===== Botones ===== */
 .btn{
   background: var(--btn);
   border: 1px solid var(--border);
@@ -70,6 +110,7 @@ body{
 .btn.secondary{ padding: 10px 14px; }
 .btn.small{ padding: 6px 10px; border-radius: 10px; }
 
+/* ===== Layout ===== */
 .layout{
   display:grid;
   grid-template-columns: 1fr 320px;
@@ -77,8 +118,9 @@ body{
   padding: 14px;
 }
 
+/* ===== Calendar ===== */
 .calendar{
-  background: rgba(18,26,51,.70);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 18px;
   overflow:hidden;
@@ -114,6 +156,7 @@ body{
   align-items:center;
   margin-bottom: 6px;
 }
+
 .daynum{
   font-size: 12px;
   color: var(--muted);
@@ -122,6 +165,7 @@ body{
   padding: 4px 8px;
 }
 
+/* ===== Events ===== */
 .events{
   display:flex;
   flex-direction: column;
@@ -133,15 +177,16 @@ body{
   align-items:center;
   gap: 8px;
   width: 100%;
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.10);
+  background: var(--event-bg);
+  border: 1px solid var(--border);
   color: var(--text);
   border-radius: 12px;
   padding: 7px 8px;
   cursor: pointer;
   text-align:left;
 }
-.event:hover{ background: rgba(255,255,255,.10); }
+.event:hover{ background: var(--event-bg-hover); }
+
 .ev-title{
   overflow:hidden;
   text-overflow: ellipsis;
@@ -157,13 +202,14 @@ body{
   flex: 0 0 auto;
 }
 
-/* Mapeo de colores por categoría vía atributo (puedes ampliar) */
+/* Mapeo de colores por categoría vía atributo (amplía si quieres) */
 .dot[data-category="Trabajo"], .badge[data-category="Trabajo"]{ background: var(--cat-trabajo); }
 .dot[data-category="Estudio"], .badge[data-category="Estudio"]{ background: var(--cat-estudio); }
 .dot[data-category="Salud"],   .badge[data-category="Salud"]{ background: var(--cat-salud); }
 
+/* ===== Sidebar ===== */
 .sidebar{
-  background: rgba(18,26,51,.70);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 18px;
   overflow:hidden;
@@ -173,6 +219,7 @@ body{
   transform: translateX(0);
   transition: transform .2s ease;
 }
+
 .sidebar-header{
   display:flex;
   justify-content: space-between;
@@ -180,6 +227,7 @@ body{
   padding: 12px 12px;
   border-bottom: 1px solid var(--border);
 }
+
 .sidebar-header h2{ margin:0; font-size: 16px; }
 .sidebar-content{ padding: 12px; overflow:auto; height: calc(100% - 54px); }
 .hint{ color: var(--muted); font-size: 13px; }
@@ -192,31 +240,17 @@ body{
   display:inline-block;
   padding: 6px 10px;
   border-radius: 999px;
-  color: #081022;
+  color: #081022; /* oscuro */
   font-weight: 700;
   font-size: 12px;
   background: var(--cat-default);
 }
 
-.notice{
-  position: fixed;
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(255,255,255,.12);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 10px 12px;
-  border-radius: 14px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .2s ease;
-}
-.notice.show{ opacity: 1; }
+/* En tema claro, el texto del badge en blanco suele verse mejor */
+:root[data-theme="light"] .badge{ color: #ffffff; }
 
-
-/* Tooltip bonito */
-.tooltip {
+/* ===== Tooltip ===== */
+.tooltip{
   position: fixed;
   z-index: 9999;
   max-width: 320px;
@@ -225,37 +259,33 @@ body{
   transform: translateY(6px) scale(0.98);
   transition: opacity .12s ease, transform .12s ease;
 }
+.tooltip.show{ opacity: 1; transform: translateY(0) scale(1); }
 
-.tooltip.show {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-}
-
-.tooltip-card {
-  background: rgba(18, 26, 51, .96);
-  border: 1px solid rgba(255,255,255,.14);
+.tooltip-card{
+  background: var(--panel);
+  border: 1px solid var(--border);
   border-radius: 14px;
   box-shadow: 0 12px 40px rgba(0,0,0,.45);
   overflow: hidden;
 }
 
-.tooltip-top {
+.tooltip-top{
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   padding: 10px 12px;
-  border-bottom: 1px solid rgba(255,255,255,.10);
+  border-bottom: 1px solid var(--border);
 }
 
-.tooltip-title {
+.tooltip-title{
   font-size: 13px;
   font-weight: 750;
   margin: 0;
   line-height: 1.2;
 }
 
-.tooltip-badge {
+.tooltip-badge{
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -268,44 +298,44 @@ body{
   white-space: nowrap;
 }
 
-.tooltip-body {
-  padding: 10px 12px 12px;
-}
+/* En claro, badge de tooltip con texto blanco queda más legible */
+:root[data-theme="light"] .tooltip-badge{ color: #ffffff; }
 
-.tooltip-when {
+.tooltip-body{ padding: 10px 12px 12px; }
+
+.tooltip-when{
   margin: 0 0 8px;
   color: var(--muted);
   font-size: 12px;
 }
 
-.tooltip-desc {
+.tooltip-desc{
   margin: 0;
-  color: rgba(233,236,245,.92);
+  color: var(--text);
   font-size: 12px;
   line-height: 1.35;
-
   display: -webkit-box;
-  -webkit-line-clamp: 2;   /* 2 líneas máximo */
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-/* Colores por categoría (reutiliza tus vars) */
+/* Colores por categoría (reutiliza vars) */
 .tooltip-badge[data-category="Trabajo"] { background: var(--cat-trabajo); }
 .tooltip-badge[data-category="Estudio"] { background: var(--cat-estudio); }
 .tooltip-badge[data-category="Salud"]   { background: var(--cat-salud); }
 
-
+/* ===== Responsive ===== */
 @media (max-width: 980px){
   .layout{ grid-template-columns: 1fr; }
   .sidebar{ position: relative; top: 0; height: auto; }
 }
 
-/* Impresión: solo calendario, sin sidebar/controles */
+/* ===== Print ===== */
 @media print{
   body{ background: #fff; color: #000; }
-  .topbar, .sidebar, .notice{ display:none !important; }
-  .calendar{ border: none; }
+  .topbar, .sidebar { display:none !important; }
+  .calendar{ border: none; background: #fff; }
   .cell{ min-height: 90px; }
   .event{ border: 1px solid #bbb; background: #fff; color: #000; }
   .daynum{ color: #000; border-color: #bbb; }

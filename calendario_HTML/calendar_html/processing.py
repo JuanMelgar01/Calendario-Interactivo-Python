@@ -7,7 +7,6 @@ import uuid
 from .models import Event
 from .validators import validate_event_dict, ValidationError
 
-
 class ProcessingError(Exception):
     pass
 
@@ -19,6 +18,36 @@ def _days_between(start: date, end: date) -> List[date]:
         out.append(cur)
         cur += timedelta(days=1)
     return out
+
+
+
+def _add_month(y: int, m: int) -> tuple[int, int]:
+    m += 1
+    if m == 13:
+        return y + 1, 1
+    return y, m
+
+def build_period_view(events: List["Event"], start_year: int, start_month: int, end_year: int, end_month: int) -> Dict[str, Any]:
+
+    categories = sorted({e.category for e in events})
+    months = []
+
+    y, m = start_year, start_month
+    while (y, m) <= (end_year, end_month):
+        month_ctx = build_month_view(events, y, m)
+        month_ctx["categories"] = categories
+        months.append(month_ctx)
+        y, m = _add_month(y, m)
+
+    return {
+        "period": {
+            "start": {"year": start_year, "month": start_month},
+            "end": {"year": end_year, "month": end_month},
+        },
+        "months": months,
+        "categories": categories,
+    }
+
 
 
 def parse_and_validate(raw_events: List[Dict[str, Any]]) -> Tuple[List[Event], List[str]]:

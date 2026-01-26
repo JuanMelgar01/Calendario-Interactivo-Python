@@ -4,7 +4,7 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Calendario {{ year }}</title>
-  <link rel="stylesheet" href="../assets/style.css">
+  <link rel="stylesheet" href="./assets/style.css">
 </head>
 <body>
   <header class="topbar">
@@ -16,11 +16,14 @@
         <div class="sub">
           <span id="yearLabel">Año {{ year }}</span>
           <label>Mes
-            <select id="monthSelect">
-              {% for m in range(1,13) %}
-                <option value="{{ m }}">{{ m }}</option>
-              {% endfor %}
-            </select>
+<select id="monthSelect">
+  {% for mctx in months %}
+    <option value="{{ loop.index0 }}" data-year="{{ mctx.year }}" data-month="{{ mctx.month }}">
+      {{ mctx.month }} / {{ mctx.year }}
+    </option>
+  {% endfor %}
+</select>
+
           </label>
         </div>
       </div>
@@ -39,6 +42,7 @@
       </label>
       <button id="printBtn" class="btn secondary">Imprimir</button>
     </div>
+        <button id="themeToggle" class="btn secondary" type="button">Modo claro</button>
   </header>
 
   <main class="layout">
@@ -51,9 +55,11 @@
       <div id="yearContainer">
         {% for mctx in months %}
           <div class="grid month-grid"
-               data-month="{{ mctx.month }}"
-               style="display:none"
-               aria-hidden="true">
+     data-idx="{{ loop.index0 }}"
+     data-year="{{ mctx.year }}"
+     data-month="{{ mctx.month }}"
+     style="display:none"
+     aria-hidden="true">
             {% for week in mctx.weeks %}
               {% for day in week %}
                 <div class="cell {% if not day.in_month %}muted{% endif %}" data-date="{{ day.date }}">
@@ -107,205 +113,232 @@
 
 
   <script>
-    const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-    const monthSelect = document.getElementById("monthSelect");
-    const monthTitle = document.getElementById("monthTitle");
-    const grids = Array.from(document.querySelectorAll(".month-grid"));
-// Tooltip
-const tooltip = document.getElementById("tooltip");
-const ttTitle = document.getElementById("ttTitle");
-const ttBadge = document.getElementById("ttBadge");
-const ttWhen  = document.getElementById("ttWhen");
-const ttDesc  = document.getElementById("ttDesc");
+  // ====== Datos base ======
+  const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  const monthSelect = document.getElementById("monthSelect");
+  const monthTitle  = document.getElementById("monthTitle");
+  const grids = Array.from(document.querySelectorAll(".month-grid"));
 
-let tooltipVisible = false;
+  // ====== Tooltip ======
+  const tooltip = document.getElementById("tooltip");
+  const ttTitle = document.getElementById("ttTitle");
+  const ttBadge = document.getElementById("ttBadge");
+  const ttWhen  = document.getElementById("ttWhen");
+  const ttDesc  = document.getElementById("ttDesc");
+  let tooltipVisible = false;
 
-function showTooltip(evData, x, y){
-  ttTitle.textContent = evData.title;
-  ttBadge.textContent = evData.category;
-  ttBadge.setAttribute("data-category", evData.category);
-  ttWhen.innerHTML = `<strong>Cuándo:</strong> ${fmtRange(evData)}`;
-  ttDesc.textContent = evData.description || "";
+  function fmtRange(ev){
+    const s = new Date(ev.start);
+    const e = ev.end ? new Date(ev.end) : null;
+    const optsDate = { year:"numeric", month:"2-digit", day:"2-digit" };
+    const optsTime = { hour:"2-digit", minute:"2-digit" };
 
-  tooltip.classList.add("show");
-  tooltip.setAttribute("aria-hidden", "false");
-  tooltipVisible = true;
+    const sDate = s.toLocaleDateString("es-ES", optsDate);
+    const sTime = s.toLocaleTimeString("es-ES", optsTime);
 
-  positionTooltip(x, y);
-}
+    if(!e) return `${sDate} ${sTime}`;
 
-function hideTooltip(){
-  tooltip.classList.remove("show");
-  tooltip.setAttribute("aria-hidden", "true");
-  tooltipVisible = false;
-}
+    const eDate = e.toLocaleDateString("es-ES", optsDate);
+    const eTime = e.toLocaleTimeString("es-ES", optsTime);
 
-function positionTooltip(x, y){
-  // offset respecto al ratón
-  const pad = 14;
-  const offsetX = 14;
-  const offsetY = 16;
-
-  tooltip.style.left = "0px";
-  tooltip.style.top = "0px";
-  tooltip.style.right = "auto";
-
-  const rect = tooltip.getBoundingClientRect();
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-
-  let left = x + offsetX;
-  let top  = y + offsetY;
-
-  // Si se sale por la derecha, lo ponemos a la izquierda del cursor
-  if(left + rect.width + pad > vw){
-    left = Math.max(pad, x - rect.width - offsetX);
-  }
-  // Si se sale por abajo, lo subimos
-  if(top + rect.height + pad > vh){
-    top = Math.max(pad, y - rect.height - offsetY);
+    if(sDate === eDate) return `${sDate} ${sTime} - ${eTime}`;
+    return `${sDate} ${sTime} → ${eDate} ${eTime}`;
   }
 
-  tooltip.style.left = `${left}px`;
-  tooltip.style.top  = `${top}px`;
-}
+  function showTooltip(evData, x, y){
+    ttTitle.textContent = evData.title;
+    ttBadge.textContent = evData.category;
+    ttBadge.setAttribute("data-category", evData.category);
+    ttWhen.innerHTML = `<strong>Cuándo:</strong> ${fmtRange(evData)}`;
+    ttDesc.textContent = evData.description || "";
 
+    tooltip.classList.add("show");
+    tooltip.setAttribute("aria-hidden", "false");
+    tooltipVisible = true;
 
+    positionTooltip(x, y);
+  }
 
-    // Sidebar
-    const sidebar = document.getElementById("sidebar");
-    const sidebarContent = document.getElementById("sidebarContent");
-    document.getElementById("closeSidebar").addEventListener("click", () => {
-      sidebar.classList.remove("open");
+  function hideTooltip(){
+    tooltip.classList.remove("show");
+    tooltip.setAttribute("aria-hidden", "true");
+    tooltipVisible = false;
+  }
+
+  function positionTooltip(x, y){
+    const pad = 14;
+    const offsetX = 14;
+    const offsetY = 16;
+
+    tooltip.style.left = "0px";
+    tooltip.style.top = "0px";
+    tooltip.style.right = "auto";
+
+    const rect = tooltip.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    let left = x + offsetX;
+    let top  = y + offsetY;
+
+    if(left + rect.width + pad > vw){
+      left = Math.max(pad, x - rect.width - offsetX);
+    }
+    if(top + rect.height + pad > vh){
+      top = Math.max(pad, y - rect.height - offsetY);
+    }
+
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top  = `${top}px`;
+  }
+
+  window.addEventListener("scroll", () => { if(tooltipVisible) hideTooltip(); }, { passive: true });
+  window.addEventListener("resize", () => { if(tooltipVisible) hideTooltip(); }, { passive: true });
+  document.addEventListener("keydown", (e) => { if(e.key === "Escape") hideTooltip(); });
+
+  // ====== Sidebar ======
+  const sidebar = document.getElementById("sidebar");
+  const sidebarContent = document.getElementById("sidebarContent");
+  document.getElementById("closeSidebar").onclick = () => sidebar.classList.remove("open");
+
+  function escapeHtml(str){
+    return String(str)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function openEvent(ev){
+    sidebarContent.innerHTML = `
+      <div class="detail">
+        <div class="badge" data-category="${escapeHtml(ev.category)}">${escapeHtml(ev.category)}</div>
+        <h3>${escapeHtml(ev.title)}</h3>
+        <p class="when"><strong>Cuándo:</strong> ${fmtRange(ev)}</p>
+        <p class="desc">${escapeHtml(ev.description)}</p>
+      </div>
+    `;
+    sidebar.classList.add("open");
+  }
+
+  // ====== Helpers: grid activo ======
+  function getActiveGrid(){
+    return document.querySelector(".month-grid.active");
+  }
+
+  // ====== Eventos: bind (click + tooltip) ======
+  function bindMonthEvents(){
+    const activeGrid = getActiveGrid();
+    if(!activeGrid) return;
+
+    activeGrid.querySelectorAll(".event").forEach(btn => {
+      const evData = JSON.parse(btn.dataset.event);
+
+      btn.onclick = () => openEvent(evData);
+
+      btn.onmouseenter = (e) => showTooltip(evData, e.clientX, e.clientY);
+      btn.onmousemove  = (e) => { if(tooltipVisible) positionTooltip(e.clientX, e.clientY); };
+      btn.onmouseleave = () => hideTooltip();
+
+      btn.onfocus = (e) => showTooltip(evData, e.clientX || 30, e.clientY || 30);
+      btn.onblur  = () => hideTooltip();
+    });
+  }
+
+  // ====== Filtro por categoría ======
+  const categoryFilter = document.getElementById("categoryFilter");
+
+  function applyFilter(){
+    const v = categoryFilter.value;
+    const activeGrid = getActiveGrid();
+    if(!activeGrid) return;
+
+    activeGrid.querySelectorAll(".event").forEach(btn => {
+      const c = btn.dataset.category;
+      btn.style.display = (v === "__all__" || c === v) ? "flex" : "none";
+    });
+  }
+
+  categoryFilter.onchange = applyFilter;
+
+  // ====== Navegación por ÍNDICE (UN SOLO SISTEMA) ======
+  function selectedMeta(){
+    const opt = monthSelect.options[monthSelect.selectedIndex];
+    const y = parseInt(opt.dataset.year, 10);
+    const m = parseInt(opt.dataset.month, 10);
+    return { y, m };
+  }
+
+  function showIndex(i){
+    grids.forEach(g => {
+      const gi = parseInt(g.dataset.idx, 10);
+      const active = (gi === i);
+      g.style.display = active ? "grid" : "none";
+      g.classList.toggle("active", active);
+      g.setAttribute("aria-hidden", active ? "false" : "true");
     });
 
-    function fmtRange(ev){
-      const s = new Date(ev.start);
-      const e = ev.end ? new Date(ev.end) : null;
-      const optsDate = { year:"numeric", month:"2-digit", day:"2-digit" };
-      const optsTime = { hour:"2-digit", minute:"2-digit" };
+    monthSelect.value = String(i);
 
-      const sDate = s.toLocaleDateString("es-ES", optsDate);
-      const sTime = s.toLocaleTimeString("es-ES", optsTime);
+    const { y, m } = selectedMeta();
+    monthTitle.textContent = `${monthNames[m-1]} ${y}`;
 
-      if(!e) return `${sDate} ${sTime}`;
+    applyFilter();
+    bindMonthEvents();
+  }
 
-      const eDate = e.toLocaleDateString("es-ES", optsDate);
-      const eTime = e.toLocaleTimeString("es-ES", optsTime);
+  function shiftIndex(delta){
+    let i = parseInt(monthSelect.value, 10);
+    if(Number.isNaN(i)) i = 0;
 
-      if(sDate === eDate) return `${sDate} ${sTime} - ${eTime}`;
-      return `${sDate} ${sTime} → ${eDate} ${eTime}`;
-    }
+    i += delta;
+    if(i < 0) i = grids.length - 1;
+    if(i >= grids.length) i = 0;
 
-    function escapeHtml(str){
-      return String(str)
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
-    }
+    showIndex(i);
+  }
 
-    function openEvent(ev){
-      sidebarContent.innerHTML = `
-        <div class="detail">
-          <div class="badge" data-category="${escapeHtml(ev.category)}">${escapeHtml(ev.category)}</div>
-          <h3>${escapeHtml(ev.title)}</h3>
-          <p class="when"><strong>Cuándo:</strong> ${fmtRange(ev)}</p>
-          <p class="desc">${escapeHtml(ev.description)}</p>
-        </div>
-      `;
-      sidebar.classList.add("open");
-    }
+  // IMPORTANTE: usar onclick (sobrescribe) para evitar duplicados
+  document.getElementById("prevMonth").onclick = () => shiftIndex(-1);
+  document.getElementById("nextMonth").onclick = () => shiftIndex(1);
+  monthSelect.onchange = () => showIndex(parseInt(monthSelect.value, 10));
 
-    // Mostrar un mes y ocultar el resto
-    function showMonth(m){
-      grids.forEach(g => {
-        const gm = parseInt(g.dataset.month, 10);
-        const active = (gm === m);
-        g.style.display = active ? "grid" : "none";
-        g.setAttribute("aria-hidden", active ? "false" : "true");
-      });
+  // ====== Imprimir ======
+  document.getElementById("printBtn").onclick = () => window.print();
 
-      monthSelect.value = String(m);
-      monthTitle.textContent = `${monthNames[m-1]} {{ year }}`;
-      applyFilter(); // reaplica filtro al cambiar de mes
-      bindMonthEvents(); // re-engancha click (por seguridad)
-    }
+  // ====== Init ======
+  (function init(){
+    showIndex(0);
+  })();
 
-    // Click en eventos del mes visible
-    function bindMonthEvents(){
-      function bindMonthEvents(){
-  const activeGrid = grids.find(g => g.style.display !== "none");
-  if(!activeGrid) return;
+  // ====== Tema claro/oscuro ======
+const themeBtn = document.getElementById("themeToggle");
 
-  activeGrid.querySelectorAll(".event").forEach(btn => {
-    const evData = JSON.parse(btn.dataset.event);
-
-    // Click: abre sidebar
-    btn.onclick = () => openEvent(evData);
-
-    // Hover: tooltip
-    btn.onmouseenter = (e) => {
-      showTooltip(evData, e.clientX, e.clientY);
-    };
-
-    btn.onmousemove = (e) => {
-      if(tooltipVisible) positionTooltip(e.clientX, e.clientY);
-    };
-
-    btn.onmouseleave = () => {
-      hideTooltip();
-    };
-
-    // Accesibilidad: si navegas con teclado
-    btn.onfocus = (e) => showTooltip(evData, e.clientX || 30, e.clientY || 30);
-    btn.onblur = () => hideTooltip();
-  });
+function setTheme(theme){
+  // theme: "dark" | "light"
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem("calendarTheme", theme);
+  themeBtn.textContent = (theme === "light") ? "Modo oscuro" : "Modo claro";
 }
 
-    }
+(function initTheme(){
+  const saved = localStorage.getItem("calendarTheme");
+  if(saved === "light" || saved === "dark"){
+    setTheme(saved);
+    return;
+  }
+  // Si no hay elección guardada, usa preferencia del sistema
+  const prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+  setTheme(prefersLight ? "light" : "dark");
+})();
 
-    // Filtro por categoría
-    const categoryFilter = document.getElementById("categoryFilter");
-    function applyFilter(){
-      const v = categoryFilter.value;
-      const activeGrid = grids.find(g => g.style.display !== "none");
-      if(!activeGrid) return;
+themeBtn.onclick = () => {
+  const current = document.documentElement.dataset.theme || "dark";
+  setTheme(current === "dark" ? "light" : "dark");
+};
 
-      activeGrid.querySelectorAll(".event").forEach(btn => {
-        const c = btn.dataset.category;
-        const show = (v === "__all__" || c === v);
-        btn.style.display = show ? "flex" : "none";
-      });
-    }
-    categoryFilter.addEventListener("change", applyFilter);
+</script>
 
-    // Navegación real entre meses
-    function shiftMonth(delta){
-      let m = parseInt(monthSelect.value, 10);
-      m += delta;
-      if(m === 0) m = 12;
-      if(m === 13) m = 1;
-      showMonth(m);
-    }
-    document.getElementById("prevMonth").addEventListener("click", () => shiftMonth(-1));
-    document.getElementById("nextMonth").addEventListener("click", () => shiftMonth(1));
-    monthSelect.addEventListener("change", () => showMonth(parseInt(monthSelect.value, 10)));
-
-    // Imprimir
-    document.getElementById("printBtn").addEventListener("click", () => window.print());
-window.addEventListener("scroll", () => { if(tooltipVisible) hideTooltip(); }, { passive: true });
-window.addEventListener("resize", () => { if(tooltipVisible) hideTooltip(); }, { passive: true });
-document.addEventListener("keydown", (e) => { if(e.key === "Escape") hideTooltip(); });
-    // Inicial: mes actual del sistema si coincide con el año, si no enero
-    (function init(){
-      const now = new Date();
-      let startMonth = 1;
-      const y = {{ year }};
-      if(now.getFullYear() === y) startMonth = now.getMonth() + 1;
-      showMonth(startMonth);
-    })();
-  </script>
 </body>
 </html>
