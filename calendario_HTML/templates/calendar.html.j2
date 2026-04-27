@@ -3,43 +3,37 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Calendario {{ year }}</title>
+  <title>Calendario interactivo</title>
   <link rel="stylesheet" href="../assets/style.css">
 </head>
 <body>
   <header class="topbar">
     <div class="nav" id="monthControls">
-      <button id="prevMonth" class="btn">◀</button>
+      <button id="prevMonth" class="btn" type="button" aria-label="Mes anterior"><</button>
 
       <div class="title">
         <h1 id="monthTitle"></h1>
         <div class="sub">
-          <span id="yearLabel">Año {{ year }}</span>
-          <label>Mes
-            <select id="monthSelect">
-              {% for m in range(1,13) %}
-                <option value="{{ m }}">{{ m }}</option>
-              {% endfor %}
-            </select>
-          </label>
+          <span id="yearLabel"></span>
+          <span id="statusLabel">Vista mensual</span>
         </div>
       </div>
 
-      <button id="nextMonth" class="btn">▶</button>
+      <button id="nextMonth" class="btn" type="button" aria-label="Mes siguiente">></button>
     </div>
 
     <div class="nav" id="weekControls" style="display:none" aria-hidden="true">
-      <button id="prevWeekTop" class="btn" type="button" aria-label="Semana anterior">◀</button>
+      <button id="prevWeekTop" class="btn" type="button" aria-label="Semana anterior"><</button>
 
       <div class="title">
         <h1 id="weekTitleTop"></h1>
         <div class="sub">
-          <span id="yearLabelWeek">Año {{ year }}</span>
-          <span>Semana</span>
+          <span id="yearLabelWeek"></span>
+          <span>Vista semanal</span>
         </div>
       </div>
 
-      <button id="nextWeekTop" class="btn" type="button" aria-label="Semana siguiente">▶</button>
+      <button id="nextWeekTop" class="btn" type="button" aria-label="Semana siguiente">></button>
     </div>
 
     <div class="controls">
@@ -48,52 +42,78 @@
         <button id="btnWeek" class="btn secondary" role="tab" aria-selected="false" type="button">Semana</button>
       </div>
 
-      <label>Filtrar categoría:
-        <select id="categoryFilter">
-          <option value="__all__">Todas</option>
-          {% for c in categories %}
-            <option value="{{ c|e }}">{{ c|e }}</option>
+      <div class="selector-row">
+        <button id="prevYear" class="btn small" type="button" aria-label="Año anterior">Año -</button>
+        <label>Año
+          <select id="yearSelect">
+            {% for year in available_years %}
+              <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button id="nextYear" class="btn small" type="button" aria-label="Año siguiente">Año +</button>
+      </div>
+
+      <label>Mes
+        <select id="monthSelect">
+          {% for month in range(1, 13) %}
+            <option value="{{ month }}" {% if month == initial_month %}selected{% endif %}>{{ month }}</option>
           {% endfor %}
         </select>
       </label>
-      <button id="printBtn" class="btn secondary">Imprimir</button>
+
+      <label>Categoria
+        <select id="categoryFilter">
+          <option value="__all__">Todas</option>
+          {% for category in categories %}
+            <option value="{{ category|e }}">{{ category|e }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <button id="printBtn" class="btn secondary" type="button">Imprimir</button>
+      <button id="themeToggle" class="btn secondary" type="button">Modo claro</button>
     </div>
   </header>
 
   <main class="layout">
     <section class="calendar">
       <div class="weekday">
-        <div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div>
+        <div>Lun</div><div>Mar</div><div>Mie</div><div>Jue</div><div>Vie</div><div>Sab</div><div>Dom</div>
       </div>
 
       <div id="monthView">
-        <div id="yearContainer">
-          {% for mctx in months %}
-            <div class="grid month-grid"
-                 data-month="{{ mctx.month }}"
-                 style="display:none"
-                 aria-hidden="true">
-              {% for week in mctx.weeks %}
-                {% for day in week %}
-                  <div class="cell {% if not day.in_month %}muted{% endif %}" data-date="{{ day.date }}">
-                    <div class="cell-top">
-                      <span class="daynum">{{ day.day }}</span>
+        <div id="calendarContainer">
+          {% for year_ctx in years %}
+            {% for month_ctx in year_ctx.months %}
+              <div class="grid month-grid"
+                   data-year="{{ year_ctx.year }}"
+                   data-month="{{ month_ctx.month }}"
+                   style="display:none"
+                   aria-hidden="true">
+                {% for week in month_ctx.weeks %}
+                  {% for day in week %}
+                    <div class="cell {% if not day.in_month %}muted{% endif %}" data-date="{{ day.date }}">
+                      <div class="cell-top">
+                        <span class="daynum">{{ day.day }}</span>
+                      </div>
+                      <div class="events">
+                        {% for event in day.events %}
+                          <button class="event"
+                                  data-event='{{ event | tojson }}'
+                                  data-category="{{ event.category|e }}"
+                                  title="{{ event.title|e }} ({{ event.category|e }})"
+                                  type="button">
+                            <span class="dot" data-category="{{ event.category|e }}"></span>
+                            <span class="ev-title">{{ event.title|e }}</span>
+                          </button>
+                        {% endfor %}
+                      </div>
                     </div>
-                    <div class="events">
-                      {% for ev in day.events %}
-                        <button class="event"
-                                data-event='{{ ev | tojson }}'
-                                data-category="{{ ev.category|e }}"
-                                title="{{ ev.title|e }} ({{ ev.category|e }})">
-                          <span class="dot" data-category="{{ ev.category|e }}"></span>
-                          <span class="ev-title">{{ ev.title|e }}</span>
-                        </button>
-                      {% endfor %}
-                    </div>
-                  </div>
+                  {% endfor %}
                 {% endfor %}
-              {% endfor %}
-            </div>
+              </div>
+            {% endfor %}
           {% endfor %}
         </div>
       </div>
@@ -106,11 +126,11 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <h2>Detalles</h2>
-        <button id="closeSidebar" class="btn small">✕</button>
+        <button id="closeSidebar" class="btn small" type="button">X</button>
       </div>
 
       <div class="sidebar-content" id="sidebarContent">
-        <p class="hint">Haz clic en un evento para ver más información.</p>
+        <p class="hint">Haz clic en un evento para ver mas informacion.</p>
       </div>
     </aside>
   </main>
@@ -128,357 +148,434 @@
     </div>
   </div>
 
-<script id="events-data" type="application/json">
-  {{ all_events | tojson }}
-</script>
-<script>
-  const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-  const monthSelect = document.getElementById("monthSelect");
-  const monthTitle = document.getElementById("monthTitle");
-  const grids = Array.from(document.querySelectorAll(".month-grid"));
+  <script id="events-data" type="application/json">
+    {{ all_events | tojson }}
+  </script>
+  <script>
+    const monthNames = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+    const yearSelect = document.getElementById("yearSelect");
+    const monthSelect = document.getElementById("monthSelect");
+    const categoryFilter = document.getElementById("categoryFilter");
+    const grids = Array.from(document.querySelectorAll(".month-grid"));
+    const availableYears = Array.from(yearSelect.options).map((option) => parseInt(option.value, 10));
 
-  const monthView = document.getElementById("monthView");
-  const weekView = document.getElementById("weekView");
-  const weekGrid = document.getElementById("weekGrid");
+    const monthTitle = document.getElementById("monthTitle");
+    const yearLabel = document.getElementById("yearLabel");
+    const yearLabelWeek = document.getElementById("yearLabelWeek");
+    const statusLabel = document.getElementById("statusLabel");
+    const weekTitleTop = document.getElementById("weekTitleTop");
+    const monthView = document.getElementById("monthView");
+    const weekView = document.getElementById("weekView");
+    const weekGrid = document.getElementById("weekGrid");
+    const monthControls = document.getElementById("monthControls");
+    const weekControls = document.getElementById("weekControls");
+    const sidebar = document.getElementById("sidebar");
+    const sidebarContent = document.getElementById("sidebarContent");
+    const tooltip = document.getElementById("tooltip");
+    const ttTitle = document.getElementById("ttTitle");
+    const ttBadge = document.getElementById("ttBadge");
+    const ttWhen = document.getElementById("ttWhen");
+    const ttDesc = document.getElementById("ttDesc");
+    const themeBtn = document.getElementById("themeToggle");
+    const btnMonth = document.getElementById("btnMonth");
+    const btnWeek = document.getElementById("btnWeek");
+    const eventsDataEl = document.getElementById("events-data");
+    const allEvents = eventsDataEl ? JSON.parse(eventsDataEl.textContent) : [];
 
-  const monthControls = document.getElementById("monthControls");
-  const weekControls = document.getElementById("weekControls");
-  const prevWeekTop = document.getElementById("prevWeekTop");
-  const nextWeekTop = document.getElementById("nextWeekTop");
-  const weekTitleTop = document.getElementById("weekTitleTop");
+    const state = {
+      view: "month",
+      currentYear: {{ selected_year }},
+      currentMonth: {{ initial_month }},
+      weekCursor: new Date({{ selected_year }}, {{ initial_month - 1 }}, 1)
+    };
 
-  const btnMonth = document.getElementById("btnMonth");
-  const btnWeek = document.getElementById("btnWeek");
+    let tooltipVisible = false;
 
-  const tooltip = document.getElementById("tooltip");
-  const ttTitle = document.getElementById("ttTitle");
-  const ttBadge = document.getElementById("ttBadge");
-  const ttWhen  = document.getElementById("ttWhen");
-  const ttDesc  = document.getElementById("ttDesc");
-  let tooltipVisible = false;
-
-  function fmtRange(ev){
-    const s = new Date(ev.start);
-    const e = ev.end ? new Date(ev.end) : null;
-    const optsDate = { year:"numeric", month:"2-digit", day:"2-digit" };
-    const optsTime = { hour:"2-digit", minute:"2-digit" };
-
-    const sDate = s.toLocaleDateString("es-ES", optsDate);
-    const sTime = s.toLocaleTimeString("es-ES", optsTime);
-
-    if(!e) return `${sDate} ${sTime}`;
-
-    const eDate = e.toLocaleDateString("es-ES", optsDate);
-    const eTime = e.toLocaleTimeString("es-ES", optsTime);
-
-    if(sDate === eDate) return `${sDate} ${sTime} - ${eTime}`;
-    return `${sDate} ${sTime} → ${eDate} ${eTime}`;
-  }
-
-  function escapeHtml(str){
-    return String(str ?? "")
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
-  }
-
-  function showTooltip(evData, x, y){
-    ttTitle.textContent = evData.title || "";
-    ttBadge.textContent = evData.category || "";
-    ttBadge.setAttribute("data-category", evData.category || "");
-    ttWhen.innerHTML = `<strong>Cuándo:</strong> ${fmtRange(evData)}`;
-    ttDesc.textContent = evData.description || "";
-
-    tooltip.classList.add("show");
-    tooltip.setAttribute("aria-hidden", "false");
-    tooltipVisible = true;
-
-    positionTooltip(x, y);
-  }
-
-  function hideTooltip(){
-    tooltip.classList.remove("show");
-    tooltip.setAttribute("aria-hidden", "true");
-    tooltipVisible = false;
-  }
-
-  function positionTooltip(x, y){
-    const pad = 14;
-    const offsetX = 14;
-    const offsetY = 16;
-
-    tooltip.style.left = "0px";
-    tooltip.style.top = "0px";
-    tooltip.style.right = "auto";
-
-    const rect = tooltip.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-
-    let left = x + offsetX;
-    let top  = y + offsetY;
-
-    if(left + rect.width + pad > vw){
-      left = Math.max(pad, x - rect.width - offsetX);
-    }
-    if(top + rect.height + pad > vh){
-      top = Math.max(pad, y - rect.height - offsetY);
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
     }
 
-    tooltip.style.left = `${left}px`;
-    tooltip.style.top  = `${top}px`;
-  }
+    function fmtRange(event) {
+      const start = new Date(event.start);
+      const end = event.end ? new Date(event.end) : null;
+      const dateOptions = { year: "numeric", month: "2-digit", day: "2-digit" };
+      const timeOptions = { hour: "2-digit", minute: "2-digit" };
 
-  const sidebar = document.getElementById("sidebar");
-  const sidebarContent = document.getElementById("sidebarContent");
-  const closeSidebarBtn = document.getElementById("closeSidebar");
-  if(closeSidebarBtn){
-    closeSidebarBtn.addEventListener("click", () => sidebar.classList.remove("open"));
-  }
+      const startDate = start.toLocaleDateString("es-ES", dateOptions);
+      const startTime = start.toLocaleTimeString("es-ES", timeOptions);
+      if (!end) return `${startDate} ${startTime}`;
 
-  function openEvent(ev){
-    sidebarContent.innerHTML = `
-      <div class="detail">
-        <div class="badge" data-category="${escapeHtml(ev.category)}">${escapeHtml(ev.category)}</div>
-        <h3>${escapeHtml(ev.title)}</h3>
-        <p class="when"><strong>Cuándo:</strong> ${fmtRange(ev)}</p>
-        <p class="desc">${escapeHtml(ev.description || "")}</p>
-      </div>
-    `;
-    sidebar.classList.add("open");
-  }
+      const endDate = end.toLocaleDateString("es-ES", dateOptions);
+      const endTime = end.toLocaleTimeString("es-ES", timeOptions);
+      if (startDate === endDate) return `${startDate} ${startTime} - ${endTime}`;
+      return `${startDate} ${startTime} -> ${endDate} ${endTime}`;
+    }
 
-  const state = {
-    view: "month",
-    weekCursor: new Date()
-  };
+    function showTooltip(eventData, x, y) {
+      ttTitle.textContent = eventData.title || "";
+      ttBadge.textContent = eventData.category || "";
+      ttBadge.setAttribute("data-category", eventData.category || "");
+      ttWhen.innerHTML = `<strong>Cuando:</strong> ${fmtRange(eventData)}`;
+      ttDesc.textContent = eventData.description || "";
 
-  const categoryFilter = document.getElementById("categoryFilter");
+      tooltip.classList.add("show");
+      tooltip.setAttribute("aria-hidden", "false");
+      tooltipVisible = true;
+      positionTooltip(x, y);
+    }
 
-  function getActiveContainer(){
-    if(state.view === "week") return weekGrid;
-    return grids.find(g => g.style.display !== "none");
-  }
+    function hideTooltip() {
+      tooltip.classList.remove("show");
+      tooltip.setAttribute("aria-hidden", "true");
+      tooltipVisible = false;
+    }
 
-  function applyFilter(){
-    const v = categoryFilter.value;
-    const container = getActiveContainer();
-    if(!container) return;
+    function positionTooltip(x, y) {
+      const pad = 14;
+      const offsetX = 14;
+      const offsetY = 16;
+      tooltip.style.left = "0px";
+      tooltip.style.top = "0px";
 
-    container.querySelectorAll(".event").forEach(btn => {
-      const c = btn.dataset.category;
-      const show = (v === "__all__" || c === v);
-      btn.style.display = show ? "flex" : "none";
-    });
-  }
+      const rect = tooltip.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
 
-  categoryFilter.addEventListener("change", applyFilter);
+      let left = x + offsetX;
+      let top = y + offsetY;
 
-  function bindActiveEvents(){
-    const container = getActiveContainer();
-    if(!container) return;
+      if (left + rect.width + pad > viewportWidth) {
+        left = Math.max(pad, x - rect.width - offsetX);
+      }
+      if (top + rect.height + pad > viewportHeight) {
+        top = Math.max(pad, y - rect.height - offsetY);
+      }
 
-    container.querySelectorAll(".event").forEach(btn => {
-      const evData = JSON.parse(btn.dataset.event);
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+    }
 
-      btn.onclick = () => openEvent(evData);
+    function openEvent(eventData) {
+      sidebarContent.innerHTML = `
+        <div class="detail">
+          <div class="badge" data-category="${escapeHtml(eventData.category)}">${escapeHtml(eventData.category)}</div>
+          <h3>${escapeHtml(eventData.title)}</h3>
+          <p class="when"><strong>Cuando:</strong> ${fmtRange(eventData)}</p>
+          <p class="desc">${escapeHtml(eventData.description || "")}</p>
+        </div>
+      `;
+      sidebar.classList.add("open");
+    }
 
-      btn.onmouseenter = (e) => showTooltip(evData, e.clientX, e.clientY);
-      btn.onmousemove  = (e) => { if(tooltipVisible) positionTooltip(e.clientX, e.clientY); };
-      btn.onmouseleave = hideTooltip;
+    function getMonthGrid(year, month) {
+      return grids.find((grid) =>
+        parseInt(grid.dataset.year, 10) === year &&
+        parseInt(grid.dataset.month, 10) === month
+      );
+    }
 
-      btn.onfocus = () => {
-        const r = btn.getBoundingClientRect();
-        showTooltip(evData, r.left + r.width/2, r.top);
-      };
-      btn.onblur = hideTooltip;
-    });
-  }
+    function isYearAvailable(year) {
+      return availableYears.includes(year);
+    }
 
-  function showMonth(m){
-    grids.forEach(g => {
-      const gm = parseInt(g.dataset.month, 10);
-      const active = (gm === m);
-      g.style.display = active ? "grid" : "none";
-      g.setAttribute("aria-hidden", active ? "false" : "true");
-    });
+    function getActiveContainer() {
+      if (state.view === "week") return weekGrid;
+      return getMonthGrid(state.currentYear, state.currentMonth);
+    }
 
-    monthSelect.value = String(m);
-    monthTitle.textContent = `${monthNames[m-1]} {{ year }}`;
-    applyFilter();
-    bindActiveEvents();
-  }
+    function bindActiveEvents() {
+      const container = getActiveContainer();
+      if (!container) return;
 
-  function syncMonthToCursor(){
-    const m = state.weekCursor.getMonth() + 1;
-    showMonth(m);
-  }
+      container.querySelectorAll(".event").forEach((button) => {
+        const eventData = JSON.parse(button.dataset.event);
+        button.onclick = () => openEvent(eventData);
+        button.onmouseenter = (e) => showTooltip(eventData, e.clientX, e.clientY);
+        button.onmousemove = (e) => {
+          if (tooltipVisible) positionTooltip(e.clientX, e.clientY);
+        };
+        button.onmouseleave = hideTooltip;
+        button.onfocus = () => {
+          const rect = button.getBoundingClientRect();
+          showTooltip(eventData, rect.left + rect.width / 2, rect.top);
+        };
+        button.onblur = hideTooltip;
+      });
+    }
 
-  function shiftMonth(delta){
-    let m = parseInt(monthSelect.value, 10);
-    m += delta;
-    if(m === 0) m = 12;
-    if(m === 13) m = 1;
-    showMonth(m);
-  }
+    function applyFilter() {
+      const container = getActiveContainer();
+      if (!container) return;
 
-  document.getElementById("prevMonth").addEventListener("click", () => {
-    if(state.view === "month") shiftMonth(-1);
-  });
-  document.getElementById("nextMonth").addEventListener("click", () => {
-    if(state.view === "month") shiftMonth(1);
-  });
-  monthSelect.addEventListener("change", () => {
-    if(state.view === "month") showMonth(parseInt(monthSelect.value, 10));
-  });
+      const value = categoryFilter.value;
+      container.querySelectorAll(".event").forEach((button) => {
+        const show = value === "__all__" || button.dataset.category === value;
+        button.style.display = show ? "flex" : "none";
+      });
+    }
 
-  document.getElementById("printBtn").addEventListener("click", () => window.print());
-  window.addEventListener("scroll", () => { if(tooltipVisible) hideTooltip(); }, { passive: true });
-  window.addEventListener("resize", () => { if(tooltipVisible) hideTooltip(); }, { passive: true });
-  document.addEventListener("keydown", (e) => { if(e.key === "Escape") hideTooltip(); });
+    function syncSelectors() {
+      yearSelect.value = String(state.currentYear);
+      monthSelect.value = String(state.currentMonth);
+      monthTitle.textContent = `${monthNames[state.currentMonth - 1]} ${state.currentYear}`;
+      yearLabel.textContent = `Año ${state.currentYear}`;
+      yearLabelWeek.textContent = `Año ${state.weekCursor.getFullYear()}`;
+      statusLabel.textContent = state.view === "month" ? "Vista mensual" : "Vista semanal";
+    }
 
-  const eventsDataEl = document.getElementById("events-data");
-  const ALL_EVENTS = eventsDataEl ? JSON.parse(eventsDataEl.textContent) : [];
+    function showMonth(year, month, syncWeekCursor = true) {
+      if (!isYearAvailable(year) || !getMonthGrid(year, month)) {
+        year = availableYears.includes(state.currentYear) ? state.currentYear : availableYears[0];
+        month = Math.min(Math.max(month, 1), 12);
+      }
 
-  function toISODate(d){
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth()+1).padStart(2,"0");
-    const dd = String(d.getDate()).padStart(2,"0");
-    return `${yyyy}-${mm}-${dd}`;
-  }
+      state.currentYear = year;
+      state.currentMonth = month;
+      if (syncWeekCursor) {
+        state.weekCursor = new Date(year, month - 1, 1);
+      }
 
-  function startOfWeek(date){
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = (day === 0 ? -6 : 1 - day);
-    d.setDate(d.getDate() + diff);
-    d.setHours(0,0,0,0);
-    return d;
-  }
-
-  function addDays(date, n){
-    const d = new Date(date);
-    d.setDate(d.getDate() + n);
-    return d;
-  }
-
-  function eventCoversDay(ev, isoDay){
-    const s = (ev.start || "").slice(0,10);
-    const e = (ev.end ? ev.end.slice(0,10) : s);
-    return s <= isoDay && isoDay <= e;
-  }
-
-  function renderWeek(){
-    const ws = startOfWeek(state.weekCursor);
-    const we = addDays(ws, 6);
-
-    weekTitleTop.textContent = `${ws.toLocaleDateString("es-ES")} — ${we.toLocaleDateString("es-ES")}`;
-
-    weekGrid.innerHTML = "";
-    for(let i=0; i<7; i++){
-      const d = addDays(ws, i);
-      const iso = toISODate(d);
-
-      const cell = document.createElement("div");
-      cell.className = "week-cell";
-      cell.setAttribute("role", "gridcell");
-      cell.dataset.date = iso;
-
-      const head = document.createElement("div");
-      head.className = "week-cell-top";
-      head.innerHTML = `<span class="daynum">${d.getDate()}</span>`;
-      cell.appendChild(head);
-
-      const eventsBox = document.createElement("div");
-      eventsBox.className = "events";
-
-      const todays = ALL_EVENTS.filter(ev => eventCoversDay(ev, iso));
-      todays.forEach(ev => {
-        const btn = document.createElement("button");
-        btn.className = "event";
-        btn.dataset.event = JSON.stringify(ev);
-        btn.dataset.category = ev.category || "";
-        btn.title = `${ev.title || ""} (${ev.category || ""})`;
-
-        btn.innerHTML = `
-          <span class="dot" data-category="${escapeHtml(ev.category || "")}"></span>
-          <span class="ev-title">${escapeHtml(ev.title || "")}</span>
-        `;
-        eventsBox.appendChild(btn);
+      grids.forEach((grid) => {
+        const active =
+          parseInt(grid.dataset.year, 10) === year &&
+          parseInt(grid.dataset.month, 10) === month;
+        grid.style.display = active ? "grid" : "none";
+        grid.setAttribute("aria-hidden", active ? "false" : "true");
       });
 
-      cell.appendChild(eventsBox);
-      weekGrid.appendChild(cell);
-    }
-
-    applyFilter();
-    bindActiveEvents();
-  }
-
-  function setView(view){
-    state.view = view;
-    const isMonth = view === "month";
-
-    monthControls.style.display = isMonth ? "flex" : "none";
-    monthControls.setAttribute("aria-hidden", isMonth ? "false" : "true");
-
-    weekControls.style.display = isMonth ? "none" : "flex";
-    weekControls.setAttribute("aria-hidden", isMonth ? "true" : "false");
-
-    monthView.style.display = isMonth ? "" : "none";
-    monthView.setAttribute("aria-hidden", isMonth ? "false" : "true");
-
-    weekView.style.display = isMonth ? "none" : "";
-    weekView.setAttribute("aria-hidden", isMonth ? "true" : "false");
-
-    btnMonth.classList.toggle("active", isMonth);
-    btnMonth.setAttribute("aria-selected", isMonth ? "true" : "false");
-    btnWeek.classList.toggle("active", !isMonth);
-    btnWeek.setAttribute("aria-selected", !isMonth ? "true" : "false");
-
-    if(!isMonth){
-      renderWeek();
-    }else{
-      syncMonthToCursor();
+      syncSelectors();
       applyFilter();
       bindActiveEvents();
     }
-  }
 
-  btnMonth.addEventListener("click", () => setView("month"));
-  btnWeek.addEventListener("click", () => {
-    const y = {{ year }};
-    const m = parseInt(monthSelect.value, 10);
-    state.weekCursor = new Date(y, m - 1, 1);
-    syncMonthToCursor();
-    setView("week");
-  });
+    function getYearIndex(year) {
+      return availableYears.indexOf(year);
+    }
 
-  prevWeekTop.addEventListener("click", () => {
-    if(state.view !== "week") return;
-    state.weekCursor = addDays(state.weekCursor, -7);
-    syncMonthToCursor();
-    renderWeek();
-  });
+    function showYear(year) {
+      showMonth(year, state.currentMonth);
+    }
 
-  nextWeekTop.addEventListener("click", () => {
-    if(state.view !== "week") return;
-    state.weekCursor = addDays(state.weekCursor, 7);
-    syncMonthToCursor();
-    renderWeek();
-  });
+    function shiftYear(delta) {
+      let index = getYearIndex(state.currentYear);
+      if (index === -1) index = 0;
+      index += delta;
+      if (index < 0) index = availableYears.length - 1;
+      if (index >= availableYears.length) index = 0;
+      showMonth(availableYears[index], state.currentMonth);
+    }
 
-  (function init(){
-    const now = new Date();
-    let startMonth = 1;
-    const y = {{ year }};
-    if(now.getFullYear() === y) startMonth = now.getMonth() + 1;
-    showMonth(startMonth);
-    setView("month");
-  })();
-</script>
+    function moveWeek(delta) {
+      const nextCursor = addDays(state.weekCursor, delta);
+      if (!isYearAvailable(nextCursor.getFullYear())) {
+        return;
+      }
 
+      state.weekCursor = nextCursor;
+      renderWeek();
+    }
+
+    function shiftMonth(delta) {
+      let yearIndex = getYearIndex(state.currentYear);
+      let month = state.currentMonth + delta;
+
+      if (month < 1) {
+        month = 12;
+        yearIndex = yearIndex <= 0 ? availableYears.length - 1 : yearIndex - 1;
+      } else if (month > 12) {
+        month = 1;
+        yearIndex = yearIndex >= availableYears.length - 1 ? 0 : yearIndex + 1;
+      }
+
+      showMonth(availableYears[yearIndex], month);
+    }
+
+    function toISODate(dateValue) {
+      const year = dateValue.getFullYear();
+      const month = String(dateValue.getMonth() + 1).padStart(2, "0");
+      const day = String(dateValue.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function startOfWeek(dateValue) {
+      const result = new Date(dateValue);
+      const day = result.getDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      result.setDate(result.getDate() + diff);
+      result.setHours(0, 0, 0, 0);
+      return result;
+    }
+
+    function addDays(dateValue, days) {
+      const result = new Date(dateValue);
+      result.setDate(result.getDate() + days);
+      return result;
+    }
+
+    function eventCoversDay(eventData, isoDay) {
+      const start = (eventData.start || "").slice(0, 10);
+      const end = (eventData.end ? eventData.end.slice(0, 10) : start);
+      return start <= isoDay && isoDay <= end;
+    }
+
+    function renderWeek() {
+      const weekStart = startOfWeek(state.weekCursor);
+      const weekEnd = addDays(weekStart, 6);
+      state.currentYear = state.weekCursor.getFullYear();
+      state.currentMonth = state.weekCursor.getMonth() + 1;
+
+      weekTitleTop.textContent = `${weekStart.toLocaleDateString("es-ES")} - ${weekEnd.toLocaleDateString("es-ES")}`;
+      weekGrid.innerHTML = "";
+
+      for (let index = 0; index < 7; index += 1) {
+        const current = addDays(weekStart, index);
+        const isoDate = toISODate(current);
+
+        const cell = document.createElement("div");
+        cell.className = "week-cell";
+        cell.setAttribute("role", "gridcell");
+        cell.dataset.date = isoDate;
+
+        const head = document.createElement("div");
+        head.className = "week-cell-top";
+        head.innerHTML = `<span class="daynum">${current.getDate()}</span>`;
+        cell.appendChild(head);
+
+        const eventsBox = document.createElement("div");
+        eventsBox.className = "events";
+
+        allEvents.filter((eventData) => eventCoversDay(eventData, isoDate)).forEach((eventData) => {
+          const button = document.createElement("button");
+          button.className = "event";
+          button.type = "button";
+          button.dataset.event = JSON.stringify(eventData);
+          button.dataset.category = eventData.category || "";
+          button.title = `${eventData.title || ""} (${eventData.category || ""})`;
+          button.innerHTML = `
+            <span class="dot" data-category="${escapeHtml(eventData.category || "")}"></span>
+            <span class="ev-title">${escapeHtml(eventData.title || "")}</span>
+          `;
+          eventsBox.appendChild(button);
+        });
+
+        cell.appendChild(eventsBox);
+        weekGrid.appendChild(cell);
+      }
+
+      syncSelectors();
+      applyFilter();
+      bindActiveEvents();
+    }
+
+    function setView(view) {
+      state.view = view;
+      const isMonth = view === "month";
+
+      monthControls.style.display = isMonth ? "flex" : "none";
+      monthControls.setAttribute("aria-hidden", isMonth ? "false" : "true");
+      weekControls.style.display = isMonth ? "none" : "flex";
+      weekControls.setAttribute("aria-hidden", isMonth ? "true" : "false");
+      monthView.style.display = isMonth ? "" : "none";
+      monthView.setAttribute("aria-hidden", isMonth ? "false" : "true");
+      weekView.style.display = isMonth ? "none" : "";
+      weekView.setAttribute("aria-hidden", isMonth ? "true" : "false");
+      btnMonth.classList.toggle("active", isMonth);
+      btnMonth.setAttribute("aria-selected", isMonth ? "true" : "false");
+      btnWeek.classList.toggle("active", !isMonth);
+      btnWeek.setAttribute("aria-selected", !isMonth ? "true" : "false");
+
+      if (isMonth) {
+        showMonth(state.currentYear, state.currentMonth, false);
+      } else {
+        state.weekCursor = new Date(state.currentYear, state.currentMonth - 1, 1);
+        renderWeek();
+      }
+    }
+
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      localStorage.setItem("calendarTheme", theme);
+      themeBtn.textContent = theme === "light" ? "Modo oscuro" : "Modo claro";
+    }
+
+    document.getElementById("closeSidebar").addEventListener("click", () => {
+      sidebar.classList.remove("open");
+    });
+
+    document.getElementById("prevMonth").addEventListener("click", () => {
+      if (state.view === "month") shiftMonth(-1);
+    });
+    document.getElementById("nextMonth").addEventListener("click", () => {
+      if (state.view === "month") shiftMonth(1);
+    });
+    document.getElementById("prevYear").addEventListener("click", () => shiftYear(-1));
+    document.getElementById("nextYear").addEventListener("click", () => shiftYear(1));
+    document.getElementById("prevWeekTop").addEventListener("click", () => {
+      if (state.view !== "week") return;
+      moveWeek(-7);
+    });
+    document.getElementById("nextWeekTop").addEventListener("click", () => {
+      if (state.view !== "week") return;
+      moveWeek(7);
+    });
+
+    yearSelect.addEventListener("change", () => {
+      const year = parseInt(yearSelect.value, 10);
+      if (state.view === "month") {
+        showYear(year);
+      } else {
+        state.weekCursor = new Date(year, state.currentMonth - 1, 1);
+        renderWeek();
+      }
+    });
+
+    monthSelect.addEventListener("change", () => {
+      const month = parseInt(monthSelect.value, 10);
+      if (state.view === "month") {
+        showMonth(state.currentYear, month);
+      } else {
+        state.weekCursor = new Date(state.currentYear, month - 1, 1);
+        renderWeek();
+      }
+    });
+
+    categoryFilter.addEventListener("change", applyFilter);
+    btnMonth.addEventListener("click", () => setView("month"));
+    btnWeek.addEventListener("click", () => setView("week"));
+    document.getElementById("printBtn").addEventListener("click", () => window.print());
+    window.addEventListener("scroll", () => { if (tooltipVisible) hideTooltip(); }, { passive: true });
+    window.addEventListener("resize", () => { if (tooltipVisible) hideTooltip(); }, { passive: true });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") hideTooltip();
+    });
+
+    (function initTheme() {
+      const saved = localStorage.getItem("calendarTheme");
+      if (saved === "light" || saved === "dark") {
+        setTheme(saved);
+        return;
+      }
+
+      const prefersLight =
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: light)").matches;
+      setTheme(prefersLight ? "light" : "dark");
+    })();
+
+    themeBtn.addEventListener("click", () => {
+      const current = document.documentElement.dataset.theme || "dark";
+      setTheme(current === "dark" ? "light" : "dark");
+    });
+
+    (function init() {
+      showMonth({{ selected_year }}, {{ initial_month }});
+      setView("month");
+    })();
+  </script>
 </body>
 </html>

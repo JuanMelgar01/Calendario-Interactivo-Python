@@ -1,6 +1,7 @@
 from __future__ import annotations
+
 from datetime import datetime, time
-from typing import Any, Dict, Tuple, Optional
+from typing import Any, Dict, Optional, Tuple
 import re
 
 
@@ -13,42 +14,32 @@ class ValidationError(Exception):
 
 
 def _parse_iso(value: str) -> Tuple[datetime, bool]:
-    """
-    Devuelve (datetime, had_time).
-    Acepta YYYY-MM-DD o YYYY-MM-DDTHH:MM[:SS]
-    """
-    value = value.strip()
-    if ISO_DATE_RE.match(value):
-        dt = datetime.strptime(value, "%Y-%m-%d")
-        return dt, False
-    if ISO_DATETIME_RE.match(value):
-        # soporta con o sin segundos
-        if len(value) == 16:
-            dt = datetime.strptime(value, "%Y-%m-%dT%H:%M")
-        else:
-            dt = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")
-        return dt, True
-    raise ValidationError(f"Formato de fecha/hora inválido: '{value}'. Usa YYYY-MM-DD o YYYY-MM-DDTHH:MM")
+    trimmed = value.strip()
+    if ISO_DATE_RE.match(trimmed):
+        return datetime.strptime(trimmed, "%Y-%m-%d"), False
+    if ISO_DATETIME_RE.match(trimmed):
+        if len(trimmed) == 16:
+            return datetime.strptime(trimmed, "%Y-%m-%dT%H:%M"), True
+        return datetime.strptime(trimmed, "%Y-%m-%dT%H:%M:%S"), True
+
+    raise ValidationError(
+        f"Formato de fecha/hora invalido: '{value}'. "
+        "Usa YYYY-MM-DD o YYYY-MM-DDTHH:MM[:SS]."
+    )
 
 
 def _ensure_required_str(data: Dict[str, Any], field: str) -> str:
     if field not in data or data[field] is None:
         raise ValidationError(f"Falta el campo requerido '{field}'.")
     if not isinstance(data[field], str) or not data[field].strip():
-        raise ValidationError(f"El campo '{field}' debe ser un texto no vacío.")
+        raise ValidationError(f"El campo '{field}' debe ser un texto no vacio.")
     return data[field].strip()
 
 
 def validate_event_dict(data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Valida y normaliza un dict de evento:
-    - title, description, category obligatorios
-    - start obligatorio
-    - end opcional
-    - start/end: ISO date o ISO datetime
-    Normaliza:
-    - si start/end son fecha (sin hora), se interpreta como 00:00 y end como 23:59:59 del mismo día (si es rango por fechas)
-    """
+    if not isinstance(data, dict):
+        raise ValidationError("Cada evento debe ser un objeto/diccionario.")
+
     title = _ensure_required_str(data, "title")
     description = _ensure_required_str(data, "description")
     category = _ensure_required_str(data, "category")
@@ -65,21 +56,16 @@ def validate_event_dict(data: Dict[str, Any]) -> Dict[str, Any]:
     end_had_time = False
     if end_raw is not None and str(end_raw).strip() != "":
         if not isinstance(end_raw, str):
-            raise ValidationError("El campo 'end' debe ser texto ISO (o vacío).")
+            raise ValidationError("El campo 'end' debe ser texto ISO o vacio.")
         end_dt, end_had_time = _parse_iso(end_raw)
 
-    # Normalización para eventos por fecha (sin hora)
-    # - Si start sin hora y end vacío: evento de todo el día (00:00 a 23:59:59)
-    # - Si start sin hora y end sin hora: rango de días, end se lleva a 23:59:59
     if not start_had_time:
         start_dt = datetime.combine(start_dt.date(), time(0, 0, 0))
         if end_dt is None:
             end_dt = datetime.combine(start_dt.date(), time(23, 59, 59))
-        else:
-            if not end_had_time:
-                end_dt = datetime.combine(end_dt.date(), time(23, 59, 59))
+        elif not end_had_time:
+            end_dt = datetime.combine(end_dt.date(), time(23, 59, 59))
 
-    # Si start con hora y end existe como fecha sin hora, lo llevamos al final del día
     if start_had_time and end_dt is not None and not end_had_time:
         end_dt = datetime.combine(end_dt.date(), time(23, 59, 59))
 
