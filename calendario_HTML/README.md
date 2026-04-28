@@ -8,7 +8,7 @@ Proyecto en Python para leer eventos desde archivos JSON o Excel, validarlos y g
 - Validacion de campos requeridos: `title`, `description`, `category` y `start`.
 - Soporte para eventos puntuales y eventos de varios dias.
 - Generacion automatica de un archivo HTML interactivo.
-- Vista mensual con navegacion por meses y anos.
+- Vista mensual con navegacion por meses y años.
 - Vista semanal complementaria.
 - Panel lateral al hacer clic en un evento.
 - Tooltip al pasar el cursor por encima de un evento.
@@ -27,27 +27,27 @@ Proyecto en Python para leer eventos desde archivos JSON o Excel, validarlos y g
 
 ```text
 calendario_HTML/
-├─ assets/
-│  └─ style.css
-├─ calendar_html/
-│  ├─ cli.py
-│  ├─ data_loader.py
-│  ├─ generator.py
-│  ├─ models.py
-│  ├─ processing.py
-│  ├─ validators.py
-│  └─ readers/
-│     ├─ excel_reader.py
-│     └─ json_reader.py
-├─ examples/
-│  ├─ events.json
-│  ├─ events.js
-│  ├─ events.xlsx
-│  └─ events_template.xlsx
-├─ output/
-│  └─ calendar.html
-└─ templates/
-   └─ calendar.html.j2
+|- assets/
+|  |- style.css
+|- calendar_html/
+|  |- cli.py
+|  |- data_loader.py
+|  |- generator.py
+|  |- models.py
+|  |- processing.py
+|  |- validators.py
+|  `- readers/
+|     |- excel_reader.py
+|     `- json_reader.py
+|- examples/
+|  |- events.json
+|  |- events.js
+|  |- events.xlsx
+|  `- events_template.xlsx
+|- output/
+|  `- calendar.html
+`- templates/
+   `- calendar.html.j2
 ```
 
 ## Formato esperado de los eventos
