@@ -1,11 +1,11 @@
 from __future__ import annotations
-from dataclasses import asdict
-from datetime import datetime, date, timedelta
-from typing import Dict, Any, List, Tuple
+
+from datetime import date, timedelta
+from typing import Any, Dict, List, Tuple
 import uuid
 
 from .models import Event
-from .validators import validate_event_dict, ValidationError
+from .validators import ValidationError, validate_event_dict
 
 
 class ProcessingError(Exception):
@@ -13,116 +13,154 @@ class ProcessingError(Exception):
 
 
 def _days_between(start: date, end: date) -> List[date]:
-    cur = start
-    out = []
-    while cur <= end:
-        out.append(cur)
-        cur += timedelta(days=1)
-    return out
+    current = start
+    values: List[date] = []
+    while current <= end:
+        values.append(current)
+        current += timedelta(days=1)
+    return values
+
+
+def _event_to_payload(event: Event) -> Dict[str, Any]:
+    return {
+        "id": event.id,
+        "title": event.title,
+        "description": event.description,
+        "category": event.category,
+        "start": event.start.isoformat(timespec="minutes"),
+        "end": (event.end.isoformat(timespec="minutes") if event.end else None),
+        "is_range": event.is_range,
+    }
+
+
+def _collect_categories(events: List[Event]) -> List[str]:
+    return sorted({event.category for event in events})
+
+
+def _collect_available_years(events: List[Event], selected_year: int) -> List[int]:
+    years = {selected_year}
+    for event in events:
+        years.add(event.start.year)
+        years.add((event.end or event.start).year)
+
+    # Dejamos un ano de margen a cada lado para que la navegacion semanal
+    # no empuje la interfaz a un ano sin rejilla mensual disponible.
+    start_year = min(years) - 1
+    end_year = max(years) + 1
+    return list(range(start_year, end_year + 1))
+
+
+def _guess_initial_month(events: List[Event], selected_year: int) -> int:
+    candidate_months = sorted(
+        {
+            event.start.month
+            for event in events
+            if event.start.year == selected_year
+        }
+    )
+    if candidate_months:
+        return candidate_months[0]
+
+    today = date.today()
+    if today.year == selected_year:
+        return today.month
+
+    return 1
 
 
 def parse_and_validate(raw_events: List[Dict[str, Any]]) -> Tuple[List[Event], List[str]]:
-    """
-    Devuelve (eventos_ok, errores)
-    """
     events: List[Event] = []
     errors: List[str] = []
 
-    for i, raw in enumerate(raw_events, start=1):
+    for index, raw_event in enumerate(raw_events, start=1):
         try:
-            normalized = validate_event_dict(raw)
-            e = Event(
-                id=str(uuid.uuid4())[:8],
-                title=normalized["title"],
-                description=normalized["description"],
-                category=normalized["category"],
-                start=normalized["start"],
-                end=normalized["end"],
+            normalized = validate_event_dict(raw_event)
+            events.append(
+                Event(
+                    id=str(uuid.uuid4())[:8],
+                    title=normalized["title"],
+                    description=normalized["description"],
+                    category=normalized["category"],
+                    start=normalized["start"],
+                    end=normalized["end"],
+                )
             )
-            events.append(e)
-        except ValidationError as ve:
-            errors.append(f"Evento #{i}: {ve}")
-        except Exception as e:
-            errors.append(f"Evento #{i}: error inesperado: {e}")
+        except ValidationError as exc:
+            errors.append(f"Evento #{index}: {exc}")
+        except Exception as exc:
+            errors.append(f"Evento #{index}: error inesperado: {exc}")
 
     return events, errors
 
 
 def build_month_view(events: List[Event], year: int, month: int) -> Dict[str, Any]:
-    """
-    Construye estructura para plantilla:
-    - semanas: lista de semanas, cada semana lista de 7 días
-    - cada día tiene: date, in_month, events (lista)
-    """
-    first = date(year, month, 1)
-    # weekday: lunes=0 ... domingo=6
-    start_weekday = first.weekday()
-    grid_start = first - timedelta(days=start_weekday)
+    first_day = date(year, month, 1)
+    start_weekday = first_day.weekday()
+    grid_start = first_day - timedelta(days=start_weekday)
 
-    # 6 semanas * 7 días (vista típica)
-    days = [grid_start + timedelta(days=i) for i in range(42)]
-    last = days[-1]
+    days = [grid_start + timedelta(days=offset) for offset in range(42)]
+    grid_end = days[-1]
+    events_by_day: Dict[date, List[Dict[str, Any]]] = {day: [] for day in days}
 
-    # Expandir eventos por día para pintarlos
-    events_by_day: Dict[date, List[Dict[str, Any]]] = {d: [] for d in days}
-    categories = sorted({e.category for e in events})
+    for event in events:
+        start_day = event.start.date()
+        end_day = (event.end.date() if event.end else event.start.date())
+        visible_start = max(start_day, grid_start)
+        visible_end = min(end_day, grid_end)
 
-    for e in events:
-        e_start_date = e.start.date()
-        e_end_date = (e.end.date() if e.end else e.start.date())
-        for d in _days_between(max(e_start_date, grid_start), min(e_end_date, last)):
-            if d in events_by_day:
-                events_by_day[d].append({
-                    "id": e.id,
-                    "title": e.title,
-                    "description": e.description,
-                    "category": e.category,
-                    "start": e.start.isoformat(timespec="minutes"),
-                    "end": (e.end.isoformat(timespec="minutes") if e.end else None),
-                    "is_range": e.is_range,
-                })
+        for current_day in _days_between(visible_start, visible_end):
+            if current_day in events_by_day:
+                events_by_day[current_day].append(_event_to_payload(event))
 
-    # Orden simple: por hora de inicio
-    for d in events_by_day:
-        events_by_day[d].sort(key=lambda x: x["start"])
+    for current_day in events_by_day:
+        events_by_day[current_day].sort(key=lambda item: item["start"])
 
     weeks = []
-    for w in range(6):
+    for week_index in range(6):
         week_days = []
-        for i in range(7):
-            d = days[w * 7 + i]
-            week_days.append({
-                "date": d.isoformat(),
-                "day": d.day,
-                "in_month": d.month == month,
-                "events": events_by_day[d],
-            })
+        for day_index in range(7):
+            current_day = days[week_index * 7 + day_index]
+            week_days.append(
+                {
+                    "date": current_day.isoformat(),
+                    "day": current_day.day,
+                    "in_month": current_day.month == month,
+                    "events": events_by_day[current_day],
+                }
+            )
         weeks.append(week_days)
 
     return {
         "year": year,
         "month": month,
         "weeks": weeks,
-        "categories": categories,
     }
 
-def build_year_view(events: List["Event"], year: int) -> Dict[str, Any]:
-    """
-    Genera contexto para un año completo:
-    - months: lista con 12 contextos mensuales
-    - categories: categorías globales del año (para filtro)
-    """
-    months = []
-    categories = sorted({e.category for e in events})
 
-    for m in range(1, 13):
-        month_ctx = build_month_view(events, year, m)
-        # Reutilizamos categories globales para que el filtro no cambie por mes
-        month_ctx["categories"] = categories
-        months.append(month_ctx)
-
+def build_year_view(events: List[Event], year: int) -> Dict[str, Any]:
     return {
         "year": year,
-        "months": months,
+        "months": [build_month_view(events, year, month) for month in range(1, 13)],
+    }
+
+
+def build_calendar_context(
+    events: List[Event],
+    selected_year: int,
+    initial_month: int | None = None,
+    initial_mode: str = "year",
+) -> Dict[str, Any]:
+    resolved_initial_month = initial_month or _guess_initial_month(events, selected_year)
+    available_years = _collect_available_years(events, selected_year)
+    categories = _collect_categories(events)
+    years = [build_year_view(events, year) for year in available_years]
+
+    return {
+        "selected_year": selected_year,
+        "initial_month": resolved_initial_month,
+        "initial_mode": initial_mode,
+        "available_years": available_years,
         "categories": categories,
+        "years": years,
+        "all_events": [event.to_dict() for event in events],
     }

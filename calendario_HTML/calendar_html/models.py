@@ -16,3 +16,13 @@ class Event:
     @property
     def is_range(self) -> bool:
         return self.end is not None and self.end != self.start
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description or "",
+            "category": self.category or "",
+            "start": self.start.isoformat(timespec="seconds"),
+            "end": self.end.isoformat(timespec="seconds") if self.end else None,
+        }
