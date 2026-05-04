@@ -1,0 +1,31 @@
+# Python: bytecode y caches locales
+__pycache__/
+*.py[cod]
+
+# Entornos virtuales locales
+.venv/
+venv/
+env/
+ENV/
+
+# Herramientas y caches de desarrollo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Archivos temporales del sistema/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Empaquetado y distribucion locales
+build/
+dist/
+*.egg-info/
+
+# Nota:
+# No se ignora `calendario_HTML/output/` porque ahora mismo contiene
+# ejemplos/salidas que ya forman parte del repo.
+# Tampoco se ignora `calendario_HTML/Calendario interactivo ejecutable/`
+# porque actua como carpeta publicada del proyecto.
